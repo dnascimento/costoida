@@ -7,7 +7,8 @@ var config = require('../config'),
   mongoose = require('./mongoose'),
   express = require('./express'),
   chalk = require('chalk'),
-  seed = require('./seed');
+  seed = require('./seed'),
+  influx = require('./influx');
 
 function seedDB() {
   if (config.seedDB && config.seedDB.seed) {
@@ -25,17 +26,18 @@ module.exports.loadModels = function loadModels() {
 
 module.exports.init = function init(callback) {
   mongoose.connect(function (db) {
-    // Initialize express
-    var app = express.init(db);
-    if (callback) callback(app, db, config);
-
+    influx.connect(function(influx){
+      // Initialize express
+      var app = express.init(db, influx);
+      if (callback) callback(app, db, influx, config);
+    });
   });
 };
 
 module.exports.start = function start(callback) {
   var _this = this;
 
-  _this.init(function (app, db, config) {
+  _this.init(function (app, db, influx, config) {
 
     // Start the app by listening on <port>
     app.listen(config.port, function () {
@@ -46,6 +48,7 @@ module.exports.start = function start(callback) {
       console.log(chalk.green('Environment:\t\t\t' + process.env.NODE_ENV));
       console.log(chalk.green('Port:\t\t\t\t' + config.port));
       console.log(chalk.green('Database:\t\t\t\t' + config.db.uri));
+      console.log(chalk.green('Influx:\t\t\t\t' + influx));
       if (process.env.NODE_ENV === 'secure') {
         console.log(chalk.green('HTTPs:\t\t\t\ton'));
       }
@@ -54,7 +57,7 @@ module.exports.start = function start(callback) {
         console.log(chalk.green('MEAN.JS version:\t\t\t' + config.meanjs['meanjs-version']));
       console.log('--');
 
-      if (callback) callback(app, db, config);
+      if (callback) callback(app, db, influx, config);
     });
 
   });
